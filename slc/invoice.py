@@ -54,7 +54,3 @@ def extract_invoice_entities(image_bytes):
 
     except Exception as e:
         return {"error": str(e)}
-
-image_bytes = open("/Users/satya/Documents/slcm/test.jpg", "rb").read()
-ans = extract_invoice_entities(image_bytes)
-print(ans)
