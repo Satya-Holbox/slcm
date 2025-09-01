@@ -103,6 +103,9 @@ from marketplace.fulfillment import router as marketplace_router
 
 from ai_concierge.ai_concierge import ai_concierge
 
+# Rice grain detector import
+from slc.Grain_Detector import analyze_rice_image
+
 # Dependency to get the Authorization token
 def get_authorization_header(request: Request):
     authorization_header = request.headers.get("Authorization")
@@ -140,6 +143,9 @@ class PiiRequest(BaseModel):
 
 class AgentCoreRequest(BaseModel):
     prompt: str
+
+class GrainAnalysisResponse(BaseModel):
+    result: dict 
 
 
 # Enable CORS for all origins
@@ -396,6 +402,7 @@ async def get_summary(request: SummaryRequest):
     summary = generate_summary(text)
 
     return SummaryResponse(summary=summary)
+
 
 
 
@@ -1052,3 +1059,40 @@ def handle_ai_concierge(user_id: str = Body(...),question: str = Body(...)):
         return {"answer": answer}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+#slc setup 
+#Grain Detector setup 
+@app.post("/api/demo_backend_v2/analyze_rice_grains")
+async def analyze_rice_grains_api(
+    image: UploadFile = File(..., description="Upload a rice grain image for analysis")
+):
+    """
+    API endpoint to analyze rice grains in an uploaded image using Gemini API.
+
+    This endpoint accepts an image file containing rice grains and returns a detailed analysis including:
+    - Total number of grains detected
+    - Classification of grain quality (whole, broken, discolored)
+    - Percentage of each quality category
+    - Any visible defects or abnormalities
+    """
+    if not image.filename:
+        raise HTTPException(status_code=400, detail="Invalid file name.")
+
+    # Save uploaded image temporarily
+    file_path = os.path.join(UPLOAD_FOLDER, image.filename)
+    with open(file_path, "wb") as f:
+        f.write(await image.read())
+
+    try:
+        # Call the rice grain analysis function
+        analysis_result = analyze_rice_image(file_path)
+
+        # Clean up the temporary file
+        os.remove(file_path)
+
+        return GrainAnalysisResponse(result=analysis_result)
+
+    except Exception as e:
+        # Clean up the temporary file in case of error
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=f"Error analyzing rice grains: {str(e)}")
