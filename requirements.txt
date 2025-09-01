@@ -3,3 +3,4 @@ uvicorn
 python-multipart
 uvicorn[standard]
 google-cloud-aiplatform
+google-generativeai
