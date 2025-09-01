@@ -1168,4 +1168,40 @@ async def identify_rice_variety_api(
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error identifying rice variety: {str(e)}")
 
+# Commodity Classifier import
+from slc.Commodity_Classifier import classify_commodity
+
+class CommodityClassifierResponse(BaseModel):
+    result: dict
+
+@app.post("/api/demo_backend_v2/classify_commodity")
+async def classify_commodity_api(
+    image: UploadFile = File(..., description="Upload an image to classify commodity type")
+):
+    """
+    API endpoint to classify commodity type (Rice, Dal, Corn, Wheat, etc.) using Gemini API.
+
+    Returns:
+    - Predicted commodity
+    - Confidence score
+    - Top 3 possible classes
+    - Features used for classification
+    """
+    if not image.filename:
+        raise HTTPException(status_code=400, detail="Invalid file name.")
+
+    file_path = os.path.join(UPLOAD_FOLDER, image.filename)
+    with open(file_path, "wb") as f:
+        f.write(await image.read())
+
+    try:
+        analysis_result = classify_commodity(file_path)
+        os.remove(file_path)
+        return CommodityClassifierResponse(result=analysis_result)
+
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=f"Error classifying commodity: {str(e)}")
+
 
