@@ -3,6 +3,7 @@ from google import genai
 import os
 from google.genai.types import HttpOptions
 from io import BytesIO
+import json
 
 try:
     gcp_project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
@@ -47,7 +48,10 @@ def detect_weigh_bridge_slip(image_bytes):
             contents=[image, prompt]
         )
         
-        return int(response.text.strip())
+        try:
+            return json.loads(response.text)
+        except json.JSONDecodeError:
+            return {"response": response.text}
 
     except Exception as e:
         return {"error": str(e)}
