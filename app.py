@@ -1132,3 +1132,40 @@ async def analyze_grain_quality_api(
         if os.path.exists(file_path):
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error analyzing grain quality: {str(e)}")
+# Rice Variety Identifier import
+from slc.Variety_Identifier import identify_rice_variety
+
+class RiceVarietyResponse(BaseModel):
+    result: dict
+
+@app.post("/api/demo_backend_v2/identify_rice_variety")
+async def identify_rice_variety_api(
+    image: UploadFile = File(..., description="Upload a rice image for variety identification")
+):
+    """
+    API endpoint to identify rice variety (e.g., Basmati, Jasmine, etc.) using Gemini API.
+
+    Returns:
+    - Predicted rice variety
+    - Confidence level
+    - Top 3 possible varieties (if uncertain)
+    - Features used for classification
+    """
+    if not image.filename:
+        raise HTTPException(status_code=400, detail="Invalid file name.")
+
+    file_path = os.path.join(UPLOAD_FOLDER, image.filename)
+    with open(file_path, "wb") as f:
+        f.write(await image.read())
+
+    try:
+        analysis_result = identify_rice_variety(file_path)
+        os.remove(file_path)
+        return RiceVarietyResponse(result=analysis_result)
+
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=f"Error identifying rice variety: {str(e)}")
+
+
