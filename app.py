@@ -1,12 +1,18 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+from pydantic import BaseModel
+from fastapi import HTTPException
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-from dotenv import load_dotenv
 app = FastAPI()
 
 app.add_middleware(
@@ -17,6 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+from slc.Grain_Detector import analyze_rice_image
+from slc.Quality_Analyzer import analyze_grain_quality
+from slc.Commodity_Classifier import classify_commodity
+from slc.Variety_Identifier import identify_rice_variety
 from slc.invoice import extract_invoice_entities
 from slc.number_plate import extract_number_plate
 from slc.quatity_detection import count_bags
