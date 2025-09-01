@@ -1,0 +1,14 @@
+# Ignore python cache folders
+__pycache__/
+
+# Ignore environment variable files
+.env
+
+#ignore venv folder
+venv/
+
+.DS_Store
+
+test.py
+
+myenv/
