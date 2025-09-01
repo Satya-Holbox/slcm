@@ -1096,3 +1096,39 @@ async def analyze_rice_grains_api(
         if os.path.exists(file_path):
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error analyzing rice grains: {str(e)}")
+
+# Grain Quality Analyzer import
+from slc.Quality_Analyzer import analyze_grain_quality
+
+class GrainQualityResponse(BaseModel):
+    result: dict
+
+@app.post("/api/demo_backend_v2/analyze_grain_quality")
+async def analyze_grain_quality_api(
+    image: UploadFile = File(..., description="Upload a rice grain image for quality analysis")
+):
+    """
+    API endpoint to analyze rice grain quality using Gemini API.
+
+    Returns:
+    - Overall quality rating (Excellent, Good, Fair, Poor)
+    - Distribution percentages
+    - Issues detected
+    - Recommendations
+    """
+    if not image.filename:
+        raise HTTPException(status_code=400, detail="Invalid file name.")
+
+    file_path = os.path.join(UPLOAD_FOLDER, image.filename)
+    with open(file_path, "wb") as f:
+        f.write(await image.read())
+
+    try:
+        analysis_result = analyze_grain_quality(file_path)
+        os.remove(file_path)
+        return GrainQualityResponse(result=analysis_result)
+
+    except Exception as e:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=500, detail=f"Error analyzing grain quality: {str(e)}")
