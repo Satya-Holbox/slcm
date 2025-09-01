@@ -105,6 +105,12 @@ from ai_concierge.ai_concierge import ai_concierge
 
 # Rice grain detector import
 from slc.Grain_Detector import analyze_rice_image
+# Grain Quality Analyzer import
+from slc.Quality_Analyzer import analyze_grain_quality
+# Commodity Classifier import
+from slc.Commodity_Classifier import classify_commodity
+# Variety Identifier import
+from slc.Variety_Identifier import identify_rice_variety
 
 # Dependency to get the Authorization token
 def get_authorization_header(request: Request):
@@ -144,8 +150,6 @@ class PiiRequest(BaseModel):
 class AgentCoreRequest(BaseModel):
     prompt: str
 
-class GrainAnalysisResponse(BaseModel):
-    result: dict 
 
 
 # Enable CORS for all origins
@@ -1061,6 +1065,8 @@ def handle_ai_concierge(user_id: str = Body(...),question: str = Body(...)):
         raise HTTPException(status_code=500, detail=str(e))
 #slc setup 
 #Grain Detector setup 
+class GrainAnalysisResponse(BaseModel):
+    result: dict 
 @app.post("/api/demo_backend_v2/analyze_rice_grains")
 async def analyze_rice_grains_api(
     image: UploadFile = File(..., description="Upload a rice grain image for analysis")
@@ -1097,8 +1103,7 @@ async def analyze_rice_grains_api(
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error analyzing rice grains: {str(e)}")
 
-# Grain Quality Analyzer import
-from slc.Quality_Analyzer import analyze_grain_quality
+# Grain Quality Analyzer setup
 
 class GrainQualityResponse(BaseModel):
     result: dict
@@ -1132,8 +1137,7 @@ async def analyze_grain_quality_api(
         if os.path.exists(file_path):
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error analyzing grain quality: {str(e)}")
-# Rice Variety Identifier import
-from slc.Variety_Identifier import identify_rice_variety
+# Rice Variety Identifier setup
 
 class RiceVarietyResponse(BaseModel):
     result: dict
@@ -1168,8 +1172,7 @@ async def identify_rice_variety_api(
             os.remove(file_path)
         raise HTTPException(status_code=500, detail=f"Error identifying rice variety: {str(e)}")
 
-# Commodity Classifier import
-from slc.Commodity_Classifier import classify_commodity
+# Commodity Classifier setup
 
 class CommodityClassifierResponse(BaseModel):
     result: dict
