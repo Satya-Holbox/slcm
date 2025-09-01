@@ -1,10 +1,11 @@
 from PIL import Image
 import os
 import json
+from io import BytesIO
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# Load environment variables
+# Load API key
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
@@ -12,54 +13,57 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-prompt = """Analyze the provided image of rice grains for quality assessment. 
-Do not focus on total grain count. Instead, evaluate the *quality aspects* of the grains.  
 
-Provide the following details:
-1. Classification of grain quality (Excellent, Good, Fair, Poor)
-2. Percentage of each category (if multiple categories exist in the image)
-3. Common quality issues observed (e.g., broken grains, discolored grains, chalky grains, shriveled grains)
-4. Recommendations to improve quality (if applicable)
-
-Return the result in strict JSON format:
-{
-    "overall_quality": "Excellent | Good | Fair | Poor",
-    "quality_distribution": {
-        "excellent": {"percentage": number},
-        "good": {"percentage": number},
-        "fair": {"percentage": number},
-        "poor": {"percentage": number}
-    },
-    "issues_detected": [list of issues],
-    "recommendations": "short actionable advice"
-}
-"""
-
-def analyze_grain_quality(image_path):
-    """Analyze rice grain quality using Gemini API."""
+def analyze_grain_quality(image_bytes: bytes):
+    """
+    Analyze rice grain quality using Gemini API with structured JSON output.
+    
+    Args:
+        image_bytes (bytes): Raw image file bytes.
+    
+    Returns:
+        dict: JSON result with quality scores, issues, and recommendations.
+    """
     try:
-        # Open image
-        image = Image.open(image_path)
-        response = genai.GenerativeModel("gemini-2.5-flash").generate_content(
+        image = Image.open(BytesIO(image_bytes))
+        model = genai.GenerativeModel("gemini-1.5-flash")  # API-key supported model
+
+        prompt = """
+        Analyze the rice grain quality in this image. Provide:
+        1. Overall quality (Excellent, Good, Fair, Poor)
+        2. Percentage of each quality category
+        3. List common issues observed (broken, discolored, chalky, shriveled)
+        4. Recommendations to improve quality
+
+        Return strictly in JSON format (without markdown fences):
+        {
+            "overall_quality": "Excellent | Good | Fair | Poor",
+            "quality_distribution": {
+                "excellent": {"percentage": number},
+                "good": {"percentage": number},
+                "fair": {"percentage": number},
+                "poor": {"percentage": number}
+            },
+            "issues_detected": [list of issues],
+            "recommendations": "short actionable advice"
+        }
+        """
+
+        response = model.generate_content(
             [image, prompt]
         )
 
-        # Clean response
-        cleaned_text = response.text.strip()
-        if cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text.strip("`")
-            if cleaned_text.lower().startswith("json"):
-                cleaned_text = cleaned_text[4:].strip()
+        text_response = response.text.strip()
 
-        # Parse JSON
-        try:
-            result = json.loads(cleaned_text)
-            if isinstance(result, dict):
-                return result
-            else:
-                return {"error": "Unexpected response type", "raw_response": cleaned_text}
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON response", "raw_response": cleaned_text}
+        # 🧹 Clean if Gemini wrapped output in ```json ... ```
+        if text_response.startswith("```"):
+            text_response = text_response.strip("`")
+            if text_response.lower().startswith("json"):
+                text_response = text_response[4:].strip()
 
+        return json.loads(text_response)
+
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse JSON from Gemini response", "raw_output": response.text}
     except Exception as e:
         return {"error": f"Error analyzing grain quality: {str(e)}"}
