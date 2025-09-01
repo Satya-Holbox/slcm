@@ -42,7 +42,6 @@ def extract_invoice_entities(image_bytes):
             - Quantity
             - Unit Price
             - Line Total
-        Format the output as a JSON object.
         """
         
         response = client.models.generate_content(
