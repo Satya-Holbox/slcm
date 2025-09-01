@@ -32,8 +32,8 @@ def count_bags(image_bytes):
         image = Image.open(BytesIO(image_bytes))
         
         prompt = """
-        Identify and extract the numerical weight reading displayed on the weighbridge's digital screen.
-        Return only the number.
+        Count the total number of rice bags visible in this image. 
+        Provide the final count as a single number.
         """
         
         response = client.models.generate_content(
