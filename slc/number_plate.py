@@ -20,29 +20,20 @@ try:
 except Exception as e:
     print(f"Error initializing Gemini Client: {e}")
 
-def extract_invoice_entities(image_bytes):
+def extract_number_plate(image_bytes):
     """
-    Extracts key entities from an invoice image.
+    Extracts the number plate from a vehicle in an image.
     Args:
-        image_path (str): The path to the image file.
+        image_bytes (bytes): The raw bytes of the image file.
     Returns:
-        dict: A dictionary containing the extracted invoice data.
+        str: The extracted alphanumeric characters of the number plate, or an error message.
     """
     try:
         image = Image.open(BytesIO(image_bytes))
         
         prompt = """
-        Analyze the provided image of an invoice. Extract the following key entities:
-        - Invoice Number
-        - Date of Issue
-        - Vendor Name
-        - Total Amount Due
-        - A list of line items, where each line item includes:
-            - Description
-            - Quantity
-            - Unit Price
-            - Line Total
-        Format the output as a JSON object.
+        Extract the number plate from the vehicle shown in this image. 
+        Only return the exact alphanumeric characters of the license plate number.
         """
         
         response = client.models.generate_content(
@@ -50,11 +41,7 @@ def extract_invoice_entities(image_bytes):
             contents=[image, prompt]
         )
         
-        return response.text
+        return response.text.strip()
 
     except Exception as e:
         return {"error": str(e)}
-
-image_bytes = open("/Users/satya/Documents/slcm/test.jpg", "rb").read()
-ans = extract_invoice_entities(image_bytes)
-print(ans)
