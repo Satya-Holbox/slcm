@@ -7,6 +7,8 @@ import os
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 
+from fastapi.responses import JSONResponse
+
 
 load_dotenv()
 
@@ -36,6 +38,8 @@ from slc.invoice import extract_invoice_entities
 from slc.number_plate import extract_number_plate
 from slc.quatity_detection import count_bags
 from slc.weigh_bridge import detect_weigh_bridge_slip
+
+# Grain Analysis setup
 
 # Grain Analysis setup
 
@@ -105,7 +109,7 @@ async def classify_commodity_api(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Error classifying commodity: {str(e)}"}
 
-@app.post("/invoice_extraction/")
+@app.post("/api/demo_backend_v2/invoice_extraction")
 async def invoice_extraction_endpoint(file: UploadFile = File(...)):
     """
     Endpoint for invoice entity extraction.
@@ -117,7 +121,7 @@ async def invoice_extraction_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Error processing the invoice: {str(e)}"}
 
-@app.post("/number_plate_extraction/")
+@app.post("/api/demo_backend_v2/number_plate_extraction")
 async def number_plate_extraction_endpoint(file: UploadFile = File(...)):
     """
     Endpoint for number plate extraction.
@@ -129,7 +133,7 @@ async def number_plate_extraction_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Error processing the number plate image: {str(e)}"}
 
-@app.post("/rice_bags_detection/")
+@app.post("/api/demo_backend_v2/rice_bags_detection")
 async def rice_bags_detection_endpoint(file: UploadFile = File(...)):
     """
     Endpoint for counting rice bags in an image.
@@ -141,7 +145,7 @@ async def rice_bags_detection_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         return {"error": f"Error processing the rice bag image: {str(e)}"}
 
-@app.post("/weigh_bridge_slip_detection/")
+@app.post("/api/demo_backend_v2/weigh_bridge_slip_detection")
 async def weigh_bridge_slip_detection_endpoint(file: UploadFile = File(...)):
     """
     Endpoint for extracting data from a weighbridge slip.
@@ -152,3 +156,8 @@ async def weigh_bridge_slip_detection_endpoint(file: UploadFile = File(...)):
         return {"result": result}
     except Exception as e:
         return {"error": f"Error processing the weighbridge slip: {str(e)}"}
+
+
+@app.get("/health")
+def healthcheck():
+    return "Hello"

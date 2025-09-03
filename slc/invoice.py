@@ -3,7 +3,8 @@ from google import genai
 import os
 from google.genai.types import HttpOptions
 from io import BytesIO
-
+import json
+import re
 try:
     gcp_project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
     gcp_location = "global"
@@ -32,16 +33,22 @@ def extract_invoice_entities(image_bytes):
         image = Image.open(BytesIO(image_bytes))
         
         prompt = """
-        Analyze the provided image of an invoice. Extract the following key entities:
-        - Invoice Number
-        - Date of Issue
-        - Vendor Name
-        - Total Amount Due
-        - A list of line items, where each line item includes:
-            - Description
-            - Quantity
-            - Unit Price
-            - Line Total
+        Analyze the provided image of an invoice. 
+        Extract the following fields and return the result as valid JSON only, without explanations, comments, or code block formatting:
+        {
+        "invoice_number": "<string>",
+        "date_of_issue": "<string in YYYY-MM-DD format>",
+        "vendor_name": "<string>",
+        "total_amount_due": "<number>",
+        "line_items": [
+            {
+            "description": "<string>",
+            "quantity": <number>,
+            "unit_price": <number>,
+            "line_total": <number>
+            }
+        ]
+        }
         """
         
         response = client.models.generate_content(
@@ -49,7 +56,11 @@ def extract_invoice_entities(image_bytes):
             contents=[image, prompt]
         )
         
-        return response.text
+        try:
+            cleaned_response = re.sub(r"```json|```", "", response.text).strip()
+            return json.loads(cleaned_response)
+        except json.JSONDecodeError:
+            return {"response": response.text}
 
     except Exception as e:
         return {"error": str(e)}
