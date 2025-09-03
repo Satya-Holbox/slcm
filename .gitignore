@@ -13,3 +13,7 @@ venv/
 test.py
 
 myenv/
+
+testing_imgs/
+test.py
+test.json
