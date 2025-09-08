@@ -3,20 +3,29 @@ from google import genai
 import os
 from google.genai.types import HttpOptions
 from io import BytesIO
-
+import json
+import re
+client = None
 try:
+    api_version = "v1alpha"
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     gcp_project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-    gcp_location = "global"
-    
-    if not gcp_project_id:
-        raise ValueError("GCP_PROJECT_ID environment variable not set.")
-    
-    client = genai.Client(
-        vertexai=True,
-        project=gcp_project_id,
-        location=gcp_location,
-        http_options=HttpOptions(api_version="v1")
-    )
+    gcp_location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+
+    if api_key:
+        client = genai.Client(
+            api_key=api_key,
+            http_options=HttpOptions(api_version=api_version)
+        )
+    elif gcp_project_id:
+        client = genai.Client(
+            vertexai=True,
+            project=gcp_project_id,
+            location=gcp_location,
+            http_options=HttpOptions(api_version=api_version)
+        )
+    else:
+        raise ValueError("Set GOOGLE_API_KEY (or GEMINI_API_KEY) or GOOGLE_CLOUD_PROJECT.")
 except Exception as e:
     print(f"Error initializing Gemini Client: {e}")
 
@@ -32,16 +41,22 @@ def extract_invoice_entities(image_bytes):
         image = Image.open(BytesIO(image_bytes))
         
         prompt = """
-        Analyze the provided image of an invoice. Extract the following key entities:
-        - Invoice Number
-        - Date of Issue
-        - Vendor Name
-        - Total Amount Due
-        - A list of line items, where each line item includes:
-            - Description
-            - Quantity
-            - Unit Price
-            - Line Total
+        Analyze the provided image of an invoice. 
+        Extract the following fields and return the result as valid JSON only, without explanations, comments, or code block formatting:
+        {
+        "invoice_number": "<string>",
+        "date_of_issue": "<string in YYYY-MM-DD format>",
+        "vendor_name": "<string>",
+        "total_amount_due": "<number>",
+        "line_items": [
+            {
+            "description": "<string>",
+            "quantity": <number>,
+            "unit_price": <number>,
+            "line_total": <number>
+            }
+        ]
+        }
         """
         
         response = client.models.generate_content(
@@ -49,7 +64,11 @@ def extract_invoice_entities(image_bytes):
             contents=[image, prompt]
         )
         
-        return response.text
+        try:
+            cleaned_response = re.sub(r"```json|```", "", response.text).strip()
+            return json.loads(cleaned_response)
+        except json.JSONDecodeError:
+            return {"response": response.text}
 
     except Exception as e:
         return {"error": str(e)}

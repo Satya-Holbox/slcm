@@ -1,10 +1,11 @@
 from PIL import Image
 import os
 import json
+from io import BytesIO
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# Load environment variables
+# Load API key
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key:
@@ -12,52 +13,53 @@ if not api_key:
 
 genai.configure(api_key=api_key)
 
-prompt = """Identify the commodity shown in the provided image.  
 
-Tasks:
-1. Detect the primary commodity type (e.g., Rice, Dal/Lentils, Corn, Wheat, Barley, Pulses, Seeds, Other).
-2. Provide confidence score (%) for the classification.
-3. If multiple commodities are present, list the top 3 possible classes with confidence levels.
-4. Highlight visual features used for classification (e.g., shape, color, size, texture).
-
-Return response strictly in JSON format:
-{
-    "predicted_commodity": "Rice | Dal | Corn | Wheat | Barley | Pulses | Seeds | Other",
-    "confidence": number,
-    "possible_classes": [
-        {"commodity": "name", "confidence": number},
-        {"commodity": "name", "confidence": number},
-        {"commodity": "name", "confidence": number}
-    ],
-    "features_used": "short explanation of observed features"
-}
-"""
-
-def classify_commodity(image_path):
-    """Classify commodity from image using Gemini API."""
+def classify_commodity(image_bytes: bytes):
+    """
+    Classify commodity using Gemini API with structured JSON output.
+    
+    Args:
+        image_bytes (bytes): Raw image bytes.
+    
+    Returns:
+        dict: JSON result with predicted commodity, confidence, possible classes, and features.
+    """
     try:
-        # Open image
-        image = Image.open(image_path)
-        response = genai.GenerativeModel("gemini-2.5-flash").generate_content(
-            [image, prompt]
-        )
+        image = Image.open(BytesIO(image_bytes))
+        model = genai.GenerativeModel("gemini-1.5-flash")  # API key supported model
 
-        # Clean response
-        cleaned_text = response.text.strip()
-        if cleaned_text.startswith("```"):
-            cleaned_text = cleaned_text.strip("`")
-            if cleaned_text.lower().startswith("json"):
-                cleaned_text = cleaned_text[4:].strip()
+        prompt = """
+        Identify the commodity in this image. Provide:
+        1. Predicted commodity (Rice, Dal, Corn, Wheat, Barley, Pulses, Seeds, Other)
+        2. Confidence score (%)
+        3. Top 3 possible commodities with confidence
+        4. Features used (short description)
 
-        # Parse JSON
-        try:
-            result = json.loads(cleaned_text)
-            if isinstance(result, dict):
-                return result
-            else:
-                return {"error": "Unexpected response type", "raw_response": cleaned_text}
-        except json.JSONDecodeError:
-            return {"error": "Invalid JSON response", "raw_response": cleaned_text}
+        Return strictly in JSON format (without markdown fences):
+        {
+            "predicted_commodity": "Rice | Dal | Corn | Wheat | Barley | Pulses | Seeds | Other",
+            "confidence": number,
+            "possible_classes": [
+                {"commodity": "name", "confidence": number},
+                {"commodity": "name", "confidence": number},
+                {"commodity": "name", "confidence": number}
+            ],
+            "features_used": "short explanation"
+        }
+        """
 
+        response = model.generate_content([image, prompt])
+        text_response = response.text.strip()
+
+        # 🧹 Clean if Gemini wrapped output in ```json ... ```
+        if text_response.startswith("```"):
+            text_response = text_response.strip("`")
+            if text_response.lower().startswith("json"):
+                text_response = text_response[4:].strip()
+
+        return json.loads(text_response)
+
+    except json.JSONDecodeError:
+        return {"error": "Failed to parse JSON from Gemini response", "raw_output": response.text}
     except Exception as e:
         return {"error": f"Error classifying commodity: {str(e)}"}
