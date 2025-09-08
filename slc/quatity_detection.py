@@ -4,19 +4,27 @@ import os
 from google.genai.types import HttpOptions
 from io import BytesIO
 
+client = None
 try:
+    api_version = "v1alpha"
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     gcp_project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
-    gcp_location = "global"
-    
-    if not gcp_project_id:
-        raise ValueError("GCP_PROJECT_ID environment variable not set.")
-    
-    client = genai.Client(
-        vertexai=True,
-        project=gcp_project_id,
-        location=gcp_location,
-        http_options=HttpOptions(api_version="v1")
-    )
+    gcp_location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+
+    if api_key:
+        client = genai.Client(
+            api_key=api_key,
+            http_options=HttpOptions(api_version=api_version)
+        )
+    elif gcp_project_id:
+        client = genai.Client(
+            vertexai=True,
+            project=gcp_project_id,
+            location=gcp_location,
+            http_options=HttpOptions(api_version=api_version)
+        )
+    else:
+        raise ValueError("Set GOOGLE_API_KEY (or GEMINI_API_KEY) or GOOGLE_CLOUD_PROJECT.")
 except Exception as e:
     print(f"Error initializing Gemini Client: {e}")
 
